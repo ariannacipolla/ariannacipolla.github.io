@@ -354,10 +354,12 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
 const lerpN = (a, b, t) => a + (b - a) * t;
 
 let dockTarget = 0;
+// su telefono il badge non va nell'angolo: resta nella home e scorre via con la pagina
+const noDock = window.matchMedia("(max-width: 800px)");
 function updateDock(dt) {
     const range = document.getElementById("home").offsetHeight * 0.6;
     const p = Math.max(0, Math.min(1, window.scrollY / range));
-    dockTarget = easeInOut(p);
+    dockTarget = noDock.matches ? 0 : easeInOut(p);
     // il badge insegue lo scorrimento con calma: anche se si scorre veloce, non salta
     const prevDock = dock;
     dock = dt === undefined || reduceMotion ? dockTarget : dock + (dockTarget - dock) * (1 - Math.exp(-dt * 5));
@@ -398,12 +400,18 @@ function updateDock(dt) {
         bottom.y = newEnd.y + (bottom.y - oldEnd.y) * kc;
         bottom.px = newEnd.px + (bottom.px - oldEndP.x) * kc;
         bottom.py = newEnd.py + (bottom.py - oldEndP.y) * kc;
+        // il fondo del badge resta un filo indietro: ne nasce un dondolio morbido
+        const lag = 0.005;
+        bottom.x -= (newEnd.x - oldEnd.x) * lag;
+        bottom.y -= (newEnd.y - oldEnd.y) * lag;
     }
     anchor = next;
 
     egg.style.visibility = p > 0.01 ? "hidden" : "";
-    logo.style.opacity = 1 - Math.min(1, dock * 2.5);
-    logo.style.pointerEvents = dock > 0.4 ? "none" : "";
+    // su telefono il logo sparisce scorrendo, così non resta sopra i titoli
+    const fade = noDock.matches ? p : dock;
+    logo.style.opacity = 1 - Math.min(1, fade * 2.5);
+    logo.style.pointerEvents = fade > 0.4 ? "none" : "";
     card.classList.toggle("docked", dock > 0.95);
 }
 
@@ -507,7 +515,18 @@ card.addEventListener("keydown", (e) => {
     }
 });
 
-window.addEventListener("resize", () => setup(false));
+// Su telefono la barra degli indirizzi cambia l'altezza mentre scorri:
+// in quel caso ridimensioniamo solo la tela, senza toccare il cordino
+let lastW = window.innerWidth;
+window.addEventListener("resize", () => {
+    if (window.innerWidth === lastW) {
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        return;
+    }
+    lastW = window.innerWidth;
+    setup(false);
+});
 // La scritta compare solo quando il badge ha finito di entrare
 setTimeout(() => egg.classList.add("show"), 3500);
 setup();
@@ -558,6 +577,15 @@ const observer = new IntersectionObserver(
     { rootMargin: "-45% 0px -45% 0px" }
 );
 document.querySelectorAll("section[id]").forEach((s) => observer.observe(s));
+
+// sopra il blocco blu dei contatti il menu passa ai colori invertiti
+const pillNav = document.querySelector(".pill-nav");
+const contactBlock = document.querySelector("#contact");
+function navOnBlue() {
+    pillNav.classList.toggle("on-blue", contactBlock.getBoundingClientRect().top < window.innerHeight - 50);
+}
+window.addEventListener("scroll", navOnBlue, { passive: true });
+navOnBlue();
 
 /* =========================================================
    4. COMPARSA DEGLI ELEMENTI MENTRE SI SCORRE
