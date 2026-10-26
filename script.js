@@ -354,12 +354,11 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
 const lerpN = (a, b, t) => a + (b - a) * t;
 
 let dockTarget = 0;
-// su telefono il badge non va nell'angolo: resta nella home e scorre via con la pagina
-const noDock = window.matchMedia("(max-width: 800px)");
 function updateDock(dt) {
     const range = document.getElementById("home").offsetHeight * 0.6;
     const p = Math.max(0, Math.min(1, window.scrollY / range));
-    dockTarget = noDock.matches ? 0 : easeInOut(p);
+    // il badge non va più nell'angolo: resta nella home e scorre via con la pagina
+    dockTarget = 0;
     // il badge insegue lo scorrimento con calma: anche se si scorre veloce, non salta
     const prevDock = dock;
     dock = dt === undefined || reduceMotion ? dockTarget : dock + (dockTarget - dock) * (1 - Math.exp(-dt * 5));
@@ -408,10 +407,9 @@ function updateDock(dt) {
     anchor = next;
 
     egg.style.visibility = p > 0.01 ? "hidden" : "";
-    // su telefono il logo sparisce scorrendo, così non resta sopra i titoli
-    const fade = noDock.matches ? p : dock;
-    logo.style.opacity = 1 - Math.min(1, fade * 2.5);
-    logo.style.pointerEvents = fade > 0.4 ? "none" : "";
+    // il logo sparisce scorrendo, così non resta sopra i titoli
+    logo.style.opacity = 1 - Math.min(1, p * 2.5);
+    logo.style.pointerEvents = p > 0.4 ? "none" : "";
     card.classList.toggle("docked", dock > 0.95);
 }
 
